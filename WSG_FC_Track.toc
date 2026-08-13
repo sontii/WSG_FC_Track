@@ -1,0 +1,8 @@
+## Interface: 11509
+## Title: WSG flag carrier track
+## Notes: Tracks WSG fc with target and hp report when attack
+## Author: sontii78
+## Version: @project-version@
+## SavedVariables: WSGFlagTrackerDB
+
+WSG_FC_Track.lua
