@@ -164,10 +164,10 @@ eventHandler:SetScript("OnEvent", function(self, event, msg, ...)
 
     if not msg then return end
 
-    local name = string.match(msg, "by ([%w%s%-]+)") or string.match(msg, "by (%S+)")
+    -- JAVÍTVA: Utolsó szó szűrése a mondat végén található írásjelek nélkül (UTF-8 kompatibilis)
+    local name = string.match(msg, "by ([^!%.]+)")
 
     if name then
-        name = name:gsub("[!%.]", "")
         name = strtrim(name)
 
         if string.find(msg, "Alliance") or string.find(msg, "alliance") then
