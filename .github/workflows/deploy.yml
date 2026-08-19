@@ -18,7 +18,5 @@ jobs:
 
       - name: Package and Release to CurseForge
         uses: BigWigsMods/packager@v2
-        with:
-          cf_id: '1651471'
         env:
           CF_API_KEY: ${{ secrets.CF_API_KEY }}

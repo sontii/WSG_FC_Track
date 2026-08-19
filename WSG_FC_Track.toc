@@ -3,6 +3,7 @@
 ## Notes: Tracks WSG fc with target and hp report when attack
 ## Author: sontii78
 ## Version: @project-version@
+## X-Curse-Project-ID: 1651471
 ## SavedVariables: WSGFlagTrackerDB
 
 WSG_FC_Track.lua
