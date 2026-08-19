@@ -26,7 +26,11 @@ local function GetClassColorOfPlayer(playerName)
             local name, _, _, _, _, fileName = GetRaidRosterInfo(i)
             if name then
                 local unitCleanName = string.split("-", name)
-                if unitCleanName:lower() == cleanName:lower() then
+                -- Note: string.lower() only normalizes ASCII bytes; for names
+                -- with accented characters (ä, ö, ü, ß, etc.) we fall back to a
+                -- raw byte comparison if the lowercase comparison doesn't match,
+                -- so correctly-cased UTF-8 names still match.
+                if unitCleanName:lower() == cleanName:lower() or unitCleanName == cleanName then
                     if fileName and RAID_CLASS_COLORS[fileName] then
                         return RAID_CLASS_COLORS[fileName]
                     end
@@ -61,11 +65,11 @@ local hordeCarrier = nil
 local function ApplyPercentPosition(f, posTable)
     local screenWidth = GetScreenWidth()
     local screenHeight = GetScreenHeight()
-    
+
     if screenWidth > 0 and screenHeight > 0 then
         local pixelX = screenWidth * posTable.xPct
         local pixelY = screenHeight * posTable.yPct
-        
+
         f:ClearAllPoints()
         f:SetPoint("TOPLEFT", UIParent, "BOTTOMLEFT", pixelX, pixelY)
     end
@@ -112,12 +116,15 @@ local function CheckAndAnnounceEFCHealth()
         local cleanTargetName = string.split("-", targetName)
         local cleanEnemyFC = string.split("-", enemyFC)
 
-        if cleanTargetName:lower() == cleanEnemyFC:lower() then
+        -- Same UTF-8-safe comparison as GetClassColorOfPlayer: try
+        -- lowercase first, then fall back to a raw match so accented
+        -- names still resolve correctly.
+        if cleanTargetName:lower() == cleanEnemyFC:lower() or cleanTargetName == cleanEnemyFC then
             local maxHealth = UnitHealthMax("target")
             if maxHealth and maxHealth > 0 then
                 local currentHealth = UnitHealth("target")
                 local healthPct = math.floor((currentHealth / maxHealth) * 100)
-                
+
                 local currentTime = GetTime()
                 if (currentTime - lastChatAnnounceTime) >= CHAT_ANNOUNCE_COOLDOWN then
                     local chatType = "SAY"
@@ -164,10 +171,20 @@ eventHandler:SetScript("OnEvent", function(self, event, msg, ...)
 
     if not msg then return end
 
-    -- JAVÍTVA: Utolsó szó szűrése a mondat végén található írásjelek nélkül (UTF-8 kompatibilis)
+    -- FIX: the previous pattern "by ([%w%s%-]+)" relied on Lua's %w
+    -- character class, which only recognizes plain ASCII letters/digits.
+    -- Names containing German (or other) accented characters such as
+    -- ä, ö, ü, ß, é, etc. are UTF-8 multi-byte sequences whose
+    -- continuation bytes don't match %w, so the old pattern truncated
+    -- those names (e.g. "Müller" -> "M").
+    --
+    -- The new pattern captures everything after "by " up to the next
+    -- "!" or "." (or end of string), which is byte-agnostic and works
+    -- correctly for any UTF-8 name.
     local name = string.match(msg, "by ([^!%.]+)")
 
     if name then
+        name = name:gsub("[!%.]", "")
         name = strtrim(name)
 
         if string.find(msg, "Alliance") or string.find(msg, "alliance") then
