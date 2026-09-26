@@ -193,6 +193,39 @@ local function CheckAndAnnounceEFCHealth()
 end
 
 -- ============================================================
+-- AUTO-PROMOTE ALL GROUP MEMBERS TO ASSISTANT
+-- Only has any effect if the local player is currently the
+-- party/raid leader -- PromoteToAssistant is a silent no-op for
+-- non-leaders per the WoW API, so no extra guard is needed beyond
+-- the UnitIsGroupLeader check below.
+-- ============================================================
+local function AutoPromoteAllToAssistant()
+    if not IsInGroup() then return end
+    if not UnitIsGroupLeader("player") then return end
+
+    if IsInRaid() then
+        local numMembers = GetNumGroupMembers()
+        for i = 1, numMembers do
+            local unit = "raid" .. i
+            if UnitExists(unit) and not UnitIsUnit(unit, "player") then
+                if not UnitIsGroupAssistant(unit) then
+                    PromoteToAssistant(unit)
+                end
+            end
+        end
+    else
+        -- Regular party: units are party1..party4 (player is implicit,
+        -- not included in this range).
+        for i = 1, GetNumSubgroupMembers() do
+            local unit = "party" .. i
+            if UnitExists(unit) then
+                PromoteToAssistant(unit)
+            end
+        end
+    end
+end
+
+-- ============================================================
 -- EVENT HANDLING
 -- ============================================================
 local eventHandler = CreateFrame("Frame")
@@ -203,6 +236,7 @@ eventHandler:RegisterEvent("CHAT_MSG_BG_SYSTEM_NEUTRAL")
 eventHandler:RegisterEvent("PLAYER_TARGET_CHANGED")
 eventHandler:RegisterEvent("UNIT_HEALTH")
 eventHandler:RegisterEvent("UPDATE_BATTLEFIELD_SCORE")
+eventHandler:RegisterEvent("GROUP_ROSTER_UPDATE")
 
 -- Periodic fallback in case UPDATE_BATTLEFIELD_SCORE doesn't fire
 -- promptly after a flag pickup (server-side throttling).
@@ -240,6 +274,9 @@ eventHandler:SetScript("OnEvent", function(self, event, msg, ...)
         if msg == "target" then
             CheckAndAnnounceEFCHealth()
         end
+        return
+    elseif event == "GROUP_ROSTER_UPDATE" then
+        AutoPromoteAllToAssistant()
         return
     end
 
